@@ -20,6 +20,8 @@ export interface GameState {
   gameOver: boolean;
 }
 
-export const TILE_SIZE = 76;
-export const BOARD_WIDTH = 400;
-export const BOARD_HEIGHT = 600;
+// 这些值现在从 uiConfig.json 动态加载
+// 默认值仅用于配置加载失败时的后备
+export const DEFAULT_TILE_SIZE = 51;
+export const DEFAULT_BOARD_WIDTH = 400;
+export const DEFAULT_BOARD_HEIGHT = 600;

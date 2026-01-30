@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { TileData, TILE_SIZE } from '../types';
+import { TileData, DEFAULT_TILE_SIZE } from '../types';
 import { UIConfig } from '../uiConfig.types';
 
 interface GameBoardProps {
@@ -10,9 +10,18 @@ interface GameBoardProps {
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({ tiles, onTileClick, uiConfig }) => {
+  const tileSize = uiConfig?.dimensions.gameBoardTile.size || DEFAULT_TILE_SIZE;
+  const containerWidth = uiConfig?.dimensions.gameBoardContainer.width || 280;
+  const containerHeight = uiConfig?.dimensions.gameBoardContainer.height || 320;
+  
   return (
     <div className="relative w-full h-full flex justify-center items-center">
-      <div className="relative" style={{ width: '350px', height: '400px', maxWidth: '90vw', maxHeight: '100%' }}>
+      <div className="relative" style={{ 
+        width: `${containerWidth}px`, 
+        height: `${containerHeight}px`, 
+        maxWidth: '90vw', 
+        maxHeight: '100%' 
+      }}>
         {tiles.map((tile) => (
         <div
           key={tile.id}
@@ -23,8 +32,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ tiles, onTileClick, uiConfig }) =
             ${tile.isSelectable ? 'opacity-100' : 'brightness-50 grayscale-[0.3] cursor-not-allowed'}
           `}
           style={{
-            width: TILE_SIZE,
-            height: TILE_SIZE,
+            width: tileSize,
+            height: tileSize,
             left: `${tile.x}px`,
             top: `${tile.y}px`,
             zIndex: tile.level * 10,
@@ -37,8 +46,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ tiles, onTileClick, uiConfig }) =
             <div 
               className="absolute inset-0 flex items-center justify-center"
               style={{
-                width: TILE_SIZE,
-                height: TILE_SIZE,
+                width: tileSize,
+                height: tileSize,
               }}
             >
               <img 

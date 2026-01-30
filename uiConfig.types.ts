@@ -6,8 +6,25 @@ export interface UIConfig {
   };
   
   dimensions: {
-    tile: {
+    gameBoardTile: {
       size: number;
+    };
+    gameBoardContainer: {
+      width: number;
+      height: number;
+    };
+    tileSpacing: {
+      horizontal: number;
+      vertical: number;
+    };
+    tilePosition: {
+      startX: number;
+      startY: number;
+      randomOffsetRange: number;
+      layerZOffset: number;
+    };
+    tileCollision: {
+      overlapThreshold: number;
     };
     board: {
       width: number;
@@ -59,11 +76,23 @@ export interface UIConfig {
     };
     
     ui: {
+      scoreBar?: {
+        path: string;
+        name: string;
+        width: number;
+        height: number;
+        style: {
+          backgroundSize: string;
+          backgroundPosition: string;
+          backgroundRepeat: string;
+        };
+      };
       scoreIcon: {
         path: string;
         name: string;
         width: number;
         height: number;
+        offsetX?: number;
       };
       button: {
         path: string;

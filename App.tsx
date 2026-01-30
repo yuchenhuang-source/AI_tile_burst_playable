@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { TileData, GameState, TILE_SIZE } from './types';
+import { TileData, GameState, DEFAULT_TILE_SIZE } from './types';
 import { getTileTypes, getSlotMaxCapacity } from './constants';
 import GameBoard from './components/GameBoard';
 import Slot from './components/Slot';
@@ -21,6 +21,15 @@ const App: React.FC = () => {
     const tileTypes = getTileTypes();
     const numTypes = 6;
     const setsOfThree = 12; // Total 36 tiles
+    
+    // 使用配置中的值，如果没有则使用默认值
+    const tileSize = uiConfig?.dimensions.gameBoardTile.size || DEFAULT_TILE_SIZE;
+    const tileSpacingH = uiConfig?.dimensions.tileSpacing.horizontal || 4;
+    const tileSpacingV = uiConfig?.dimensions.tileSpacing.vertical || 4;
+    const startX = uiConfig?.dimensions.tilePosition.startX || 50;
+    const startY = uiConfig?.dimensions.tilePosition.startY || 30;
+    const randomRange = uiConfig?.dimensions.tilePosition.randomOffsetRange || 35;
+    const layerZOffset = uiConfig?.dimensions.tilePosition.layerZOffset || 2;
     
     for (let t = 0; t < numTypes; t++) {
       const typeInfo = tileTypes[t % tileTypes.length];
@@ -49,14 +58,14 @@ const App: React.FC = () => {
       const col = posInLayer % 3;
       const row = Math.floor(posInLayer / 3);
       
-      const offsetX = (Math.random() - 0.5) * 50;
-      const offsetY = (Math.random() - 0.5) * 50;
+      const offsetX = (Math.random() - 0.5) * randomRange;
+      const offsetY = (Math.random() - 0.5) * randomRange;
 
       return {
         ...tile,
         level: layer,
-        x: col * (TILE_SIZE + 6) + 60 + offsetX,
-        y: row * (TILE_SIZE + 6) + 40 + offsetY + (layer * 2),
+        x: col * (tileSize + tileSpacingH) + startX + offsetX,
+        y: row * (tileSize + tileSpacingV) + startY + offsetY + (layer * layerZOffset),
       };
     });
 
@@ -66,33 +75,41 @@ const App: React.FC = () => {
       score: 0,
       gameOver: false,
     });
-  }, []);
+  }, [uiConfig]);
 
   useEffect(() => {
     loadUIConfig().then(config => {
       setUIConfig(config);
-      initializeGame();
     }).catch(error => {
       console.error('Failed to load UI config:', error);
-      initializeGame(); // 使用默认配置继续
     });
   }, []);
 
+  useEffect(() => {
+    // 当配置加载完成后初始化游戏
+    if (uiConfig !== null || gameState.allTiles.length === 0) {
+      initializeGame();
+    }
+  }, [uiConfig, initializeGame]);
+
   function updateSelectableTiles(tiles: TileData[]): TileData[] {
+    const tileSize = uiConfig?.dimensions.gameBoardTile.size || DEFAULT_TILE_SIZE;
+    const overlapThreshold = uiConfig?.dimensions.tileCollision.overlapThreshold || 10;
+    
     return tiles.map((tile) => {
       if (tile.isRemoved || tile.isInSlot) return { ...tile, isSelectable: false };
       
       const isCovered = tiles.some(other => {
         if (other.isRemoved || other.isInSlot || other.level <= tile.level || other.id === tile.id) return false;
         
-        const rect1 = { x: tile.x, y: tile.y, w: TILE_SIZE, h: TILE_SIZE };
-        const rect2 = { x: other.x, y: other.y, w: TILE_SIZE, h: TILE_SIZE };
+        const rect1 = { x: tile.x, y: tile.y, w: tileSize, h: tileSize };
+        const rect2 = { x: other.x, y: other.y, w: tileSize, h: tileSize };
         
         return (
-          rect1.x < rect2.x + rect2.w - 15 &&
-          rect1.x + rect1.w > rect2.x + 15 &&
-          rect1.y < rect2.y + rect2.h - 15 &&
-          rect1.y + rect1.h > rect2.y + 15
+          rect1.x < rect2.x + rect2.w - overlapThreshold &&
+          rect1.x + rect1.w > rect2.x + overlapThreshold &&
+          rect1.y < rect2.y + rect2.h - overlapThreshold &&
+          rect1.y + rect1.h > rect2.y + overlapThreshold
         );
       });
 
@@ -157,19 +174,36 @@ const App: React.FC = () => {
       }}
     >
       <div className="flex justify-center items-center py-2">
-        <div className="w-1/4 min-w-[140px] bg-white/90 backdrop-blur rounded-full shadow-lg flex items-center px-4 py-2 border-2 border-blue-100">
+        <div className="relative flex items-center justify-center">
           <img 
             src={uiConfig?.assets.ui.scoreIcon.path || '/assets/img_star.png'} 
             alt="star" 
-            className="mr-2"
+            className="absolute z-10"
             style={{
-              width: uiConfig?.assets.ui.scoreIcon.width || 32,
-              height: uiConfig?.assets.ui.scoreIcon.height || 32
+              width: uiConfig?.assets.ui.scoreIcon.width || 50,
+              height: uiConfig?.assets.ui.scoreIcon.height || 50,
+              left: 0,
+              transform: 'translateX(-50%)'
             }}
           />
-          <div className="flex-1 text-center font-black text-blue-600 text-xl tracking-tight">
+          <img 
+            src={uiConfig?.assets.ui.scoreBar?.path || '/assets/img_name_bg.png'}
+            alt="score bar"
+            style={{
+              width: uiConfig?.assets.ui.scoreBar?.width || 210,
+              height: uiConfig?.assets.ui.scoreBar?.height || 66
+            }}
+          />
+          <span 
+            className="absolute font-black text-white text-lg tracking-tight"
+            style={{ 
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+              left: '50%',
+              transform: 'translateX(-30%)'
+            }}
+          >
             {gameState.score}
-          </div>
+          </span>
         </div>
       </div>
 

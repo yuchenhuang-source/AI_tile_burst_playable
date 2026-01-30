@@ -6,14 +6,35 @@
   },
   
   "dimensions": {
-    "tile": {
-      "size": 76,
-      "_comment": "方块的基础尺寸（像素），用于游戏板上的方块显示"
+    "gameBoardTile": {
+      "size": 51,
+      "_comment": "游戏板上方块的尺寸（像素），原始76px的2/3"
+    },
+    "gameBoardContainer": {
+      "width": 280,
+      "height": 320,
+      "_comment": "游戏板容器的尺寸，用于限制游戏区域大小"
+    },
+    "tileSpacing": {
+      "horizontal": 4,
+      "vertical": 4,
+      "_comment": "方块之间的水平和垂直间距"
+    },
+    "tilePosition": {
+      "startX": 50,
+      "startY": 30,
+      "randomOffsetRange": 35,
+      "layerZOffset": 2,
+      "_comment": "方块位置参数：起始X/Y坐标，随机偏移范围，层级Z轴偏移"
+    },
+    "tileCollision": {
+      "overlapThreshold": 10,
+      "_comment": "方块重叠检测的阈值（像素）"
     },
     "board": {
       "width": 400,
       "height": 600,
-      "_comment": "游戏板的宽高（像素）"
+      "_comment": "游戏板的逻辑宽高（像素）"
     },
     "slot": {
       "maxCapacity": 6,
@@ -27,7 +48,7 @@
     "slotItem": {
       "width": 76,
       "height": 76,
-      "_comment": "单个槽位格子的尺寸，与方块大小完全一致(76x76px)"
+      "_comment": "单个槽位格子的尺寸"
     }
   },
   
@@ -101,12 +122,19 @@
     },
     
     "ui": {
+      "scoreBar": {
+        "path": "/assets/img_name_bg.png",
+        "name": "分数条背景",
+        "width": 105,
+        "height": 33,
+        "_comment": "分数条背景图，保持原图比例210:66，缩小50%"
+      },
       "scoreIcon": {
         "path": "/assets/img_star.png",
         "name": "分数图标",
-        "width": 32,
-        "height": 32,
-        "_comment": "分数显示区域的星星图标"
+        "width": 36,
+        "height": 36,
+        "_comment": "分数显示区域的星星图标，放在条的左边头位置"
       },
       "button": {
         "path": "/assets/btn.png",
