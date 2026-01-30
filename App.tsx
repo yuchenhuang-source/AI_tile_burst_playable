@@ -30,6 +30,7 @@ const App: React.FC = () => {
   const [starBurstSlots, setStarBurstSlots] = useState<number[]>([]);
   const [flyingStars, setFlyingStars] = useState<FlyingStarData[]>([]);
   const [scoreStarBursts, setScoreStarBursts] = useState<string[]>([]);
+  const [shiftingTiles, setShiftingTiles] = useState<{ id: string; fromIndex: number; toIndex: number; direction: 'left' | 'right' }[]>([]);
   const slotContainerRef = useRef<HTMLDivElement>(null);
   const scoreIconRef = useRef<HTMLDivElement>(null);
 
@@ -153,10 +154,40 @@ const App: React.FC = () => {
     const slotContainer = slotContainerRef.current;
     if (!slotContainer) return;
 
-    const currentSlotCount = gameState.slot.length;
-    const targetSlotIndex = currentSlotCount;
+    const currentSlot = [...gameState.slot];
     
-    const targetSlotElement = slotContainer.querySelector(`[data-slot-index="${targetSlotIndex}"]`);
+    const sameTypeIndices = currentSlot
+      .map((t, i) => t.type === tile.type ? i : -1)
+      .filter(i => i !== -1);
+    
+    let insertIndex: number;
+    if (sameTypeIndices.length > 0) {
+      insertIndex = sameTypeIndices[sameTypeIndices.length - 1] + 1;
+    } else {
+      insertIndex = currentSlot.length;
+    }
+
+    console.log('[DEBUG] handleTileClick: tileType=', tile.type, 'insertIndex=', insertIndex, 'currentSlot=', currentSlot.map(t => t.type));
+
+    const tilesToShiftRight: { id: string; fromIndex: number; toIndex: number; direction: 'left' | 'right' }[] = [];
+    for (let i = insertIndex; i < currentSlot.length; i++) {
+      tilesToShiftRight.push({
+        id: currentSlot[i].id,
+        fromIndex: i,
+        toIndex: i + 1,
+        direction: 'right'
+      });
+    }
+
+    if (tilesToShiftRight.length > 0) {
+      console.log('[DEBUG] tilesToShiftRight:', tilesToShiftRight);
+    }
+
+    if (tilesToShiftRight.length > 0) {
+      setShiftingTiles(tilesToShiftRight);
+    }
+
+    const targetSlotElement = slotContainer.querySelector(`[data-slot-index="${insertIndex}"]`);
     if (!targetSlotElement) return;
     
     const slotCellRect = targetSlotElement.getBoundingClientRect();
@@ -188,21 +219,26 @@ const App: React.FC = () => {
     const flyDuration = uiConfig?.effects.animations.tileToSlot.duration || 400;
 
     setTimeout(() => {
+      setShiftingTiles([]);
       setFlyingTile(null);
       
       setGameState(prev => {
         const newTile = { ...tile, isInSlot: true, animationState: 'bouncing' as const };
-        const newSlot = [...prev.slot, newTile];
+        const newSlot = [...prev.slot];
+        newSlot.splice(insertIndex, 0, newTile);
+        
+        console.log('[DEBUG] After insert: newSlot=', newSlot.map(t => t.type));
+        
         const updatedAllTiles = prev.allTiles.map(t => 
           t.id === tileId ? { ...t, isInSlot: true } : t
         );
 
-        const groupedSlot = newSlot.sort((a, b) => a.type - b.type);
-
         const typeCount: Record<number, number> = {};
-        groupedSlot.forEach(t => {
+        newSlot.forEach(t => {
           typeCount[t.type] = (typeCount[t.type] || 0) + 1;
         });
+
+        
 
         const matchedType = Object.entries(typeCount).find(([_, count]) => count === 3);
         
@@ -210,12 +246,12 @@ const App: React.FC = () => {
           const typeToRemove = parseInt(matchedType[0]);
           const matchDuration = uiConfig?.effects.animations.tileMatch.duration || 300;
           
-          const slotWithMatchAnimation = groupedSlot.map(t => 
+          const slotWithMatchAnimation = newSlot.map(t => 
             t.type === typeToRemove ? { ...t, animationState: 'matching' as const } : t
           );
           
           const matchingIndices: number[] = [];
-          groupedSlot.forEach((t, idx) => {
+          newSlot.forEach((t, idx) => {
             if (t.type === typeToRemove) {
               matchingIndices.push(idx);
             }
@@ -224,7 +260,39 @@ const App: React.FC = () => {
           
           setTimeout(() => {
             setGameState(current => {
-              const finalSlot = current.slot.filter(t => t.type !== typeToRemove);
+              const oldSlot = current.slot;
+              const remainingSlot = oldSlot.filter(t => t.type !== typeToRemove);
+              
+              const matchingIndicesSet = new Set<number>();
+              oldSlot.forEach((t, idx) => {
+                if (t.type === typeToRemove) {
+                  matchingIndicesSet.add(idx);
+                }
+              });
+              
+              const tilesToShiftLeft: { id: string; fromIndex: number; toIndex: number; direction: 'left' | 'right' }[] = [];
+              
+              remainingSlot.forEach((t, newIdx) => {
+                const oldIdx = oldSlot.findIndex(ot => ot.id === t.id);
+                if (oldIdx !== newIdx) {
+                  tilesToShiftLeft.push({
+                    id: t.id,
+                    fromIndex: oldIdx - newIdx,
+                    toIndex: 0,
+                    direction: 'left'
+                  });
+                }
+              });
+              
+              if (tilesToShiftLeft.length > 0) {
+                setShiftingTiles(tilesToShiftLeft);
+                
+                const leftShiftDuration = uiConfig?.effects.animations.slotShiftLeft?.duration || 300;
+                setTimeout(() => {
+                  setShiftingTiles([]);
+                }, leftShiftDuration);
+              }
+              
               const finalAllTiles = current.allTiles.map(t => 
                 t.type === typeToRemove && t.isInSlot ? { ...t, isRemoved: true, isInSlot: false } : t
               );
@@ -232,7 +300,7 @@ const App: React.FC = () => {
               return {
                 ...current,
                 allTiles: updateSelectableTiles(finalAllTiles),
-                slot: finalSlot,
+                slot: remainingSlot,
                 score: current.score + 100,
                 scorePopup: { value: 100, key: Date.now() },
               };
@@ -246,7 +314,7 @@ const App: React.FC = () => {
           };
         }
 
-        const isGameOver = groupedSlot.length >= slotMaxCapacity;
+        const isGameOver = newSlot.length >= slotMaxCapacity;
 
         setTimeout(() => {
           setGameState(current => ({
@@ -258,7 +326,7 @@ const App: React.FC = () => {
         return {
           ...prev,
           allTiles: updateSelectableTiles(updatedAllTiles),
-          slot: groupedSlot,
+          slot: newSlot,
           gameOver: isGameOver,
         };
       });
@@ -419,6 +487,8 @@ const App: React.FC = () => {
             uiConfig={uiConfig} 
             starBurstSlots={starBurstSlots}
             onStarBurstComplete={handleStarBurstComplete}
+            shiftingTiles={shiftingTiles}
+            onShiftComplete={() => setShiftingTiles([])}
           />
         </div>
       </div>

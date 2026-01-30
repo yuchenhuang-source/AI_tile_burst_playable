@@ -177,6 +177,14 @@ export interface UIConfig {
         starImage: string;
         delay: number;
       };
+      slotShiftRight: {
+        duration: number;
+        easing: string;
+      };
+      slotShiftLeft: {
+        duration: number;
+        easing: string;
+      };
     };
     transitions: {
       tile: {

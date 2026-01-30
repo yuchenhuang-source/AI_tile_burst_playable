@@ -247,6 +247,20 @@
         "_target": "飞行星星",
         "_effect": "飞行效果",
         "_comment": "星星从消除位置飞向分数条星星位置的飞行效果"
+      },
+      "slotShiftRight": {
+        "duration": 300,
+        "easing": "ease-out",
+        "_target": "槽位方块",
+        "_effect": "右移效果",
+        "_comment": "新方块插入时，后面的方块向右移动一格的右移效果"
+      },
+      "slotShiftLeft": {
+        "duration": 300,
+        "easing": "ease-out",
+        "_target": "槽位方块",
+        "_effect": "左移效果",
+        "_comment": "三消后，后面的方块向前移动的左移效果"
       }
     },
     

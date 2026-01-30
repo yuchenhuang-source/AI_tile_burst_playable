@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TileData } from '../types';
 import { getSlotMaxCapacity } from '../constants';
 import { UIConfig } from '../uiConfig.types';
@@ -10,19 +10,27 @@ interface SlotProps {
   uiConfig: UIConfig | null;
   starBurstSlots?: number[];
   onStarBurstComplete?: (index: number, position: {x: number, y: number}) => void;
+  shiftingTiles?: { id: string; fromIndex: number; toIndex: number; direction: 'left' | 'right' }[];
+  onShiftComplete?: () => void;
 }
 
-const Slot: React.FC<SlotProps> = ({ tiles, uiConfig, starBurstSlots = [], onStarBurstComplete }) => {
+const Slot: React.FC<SlotProps> = ({ 
+  tiles, 
+  uiConfig, 
+  starBurstSlots = [], 
+  onStarBurstComplete,
+  shiftingTiles = [],
+  onShiftComplete
+}) => {
   const slotMaxCapacity = uiConfig?.dimensions.slot.maxCapacity || getSlotMaxCapacity();
   const slots = Array.from({ length: slotMaxCapacity });
-
-  // 使用state来存储槽位大小，以便响应窗口变化
   const [slotItemSize, setSlotItemSize] = useState(76);
+  const [shiftPhase, setShiftPhase] = useState<'idle' | 'start' | 'animating'>('idle');
+  const shiftCompleteRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const calculateSlotSize = () => {
       const baseSize = uiConfig?.dimensions.slotItem.width || 76;
-      // 屏幕宽度减去padding(左右各24px)，再除以槽位数量加间隙
       const maxSize = (window.innerWidth - 48) / (slotMaxCapacity + 0.5);
       setSlotItemSize(Math.min(baseSize, maxSize));
     };
@@ -32,10 +40,77 @@ const Slot: React.FC<SlotProps> = ({ tiles, uiConfig, starBurstSlots = [], onSta
     return () => window.removeEventListener('resize', calculateSlotSize);
   }, [slotMaxCapacity, uiConfig]);
 
+  useEffect(() => {
+    if (shiftingTiles.length > 0) {
+      setShiftPhase('start');
+      
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setShiftPhase('animating');
+        });
+      });
+      
+      if (shiftCompleteRef.current) {
+        clearTimeout(shiftCompleteRef.current);
+      }
+      
+      const duration = shiftingTiles[0]?.direction === 'right' 
+        ? (uiConfig?.effects.animations.slotShiftRight?.duration || 300)
+        : (uiConfig?.effects.animations.slotShiftLeft?.duration || 300);
+      
+      shiftCompleteRef.current = setTimeout(() => {
+        setShiftPhase('idle');
+        onShiftComplete?.();
+      }, duration + 50);
+    } else {
+      setShiftPhase('idle');
+    }
+    
+    return () => {
+      if (shiftCompleteRef.current) {
+        clearTimeout(shiftCompleteRef.current);
+      }
+    };
+  }, [shiftingTiles, uiConfig, onShiftComplete]);
+
+  const getShiftInfo = (tileId: string) => {
+    return shiftingTiles.find(s => s.id === tileId);
+  };
+
+  const getShiftOffset = (shiftInfo: { fromIndex: number; toIndex: number; direction: 'left' | 'right' } | undefined, currentIndex: number) => {
+    if (!shiftInfo) return 0;
+    if (shiftPhase === 'idle') return 0;
+    
+    const slotWidth = slotItemSize + 4;
+    
+    if (shiftInfo.direction === 'left') {
+      if (shiftPhase === 'start') {
+        return shiftInfo.fromIndex * slotWidth;
+      }
+      return 0;
+    } else {
+      if (shiftPhase === 'start') {
+        return 0;
+      }
+      return slotWidth;
+    }
+  };
+
   return (
     <div className="flex gap-1 w-full justify-center items-center h-full">
       {slots.map((_, index) => {
         const tile = tiles[index];
+        const shiftInfo = tile ? getShiftInfo(tile.id) : undefined;
+        const shiftOffset = getShiftOffset(shiftInfo, index);
+        
+        const shiftDuration = shiftInfo?.direction === 'right'
+          ? (uiConfig?.effects.animations.slotShiftRight?.duration || 300)
+          : (uiConfig?.effects.animations.slotShiftLeft?.duration || 300);
+        const shiftEasing = shiftInfo?.direction === 'right'
+          ? (uiConfig?.effects.animations.slotShiftRight?.easing || 'ease-out')
+          : (uiConfig?.effects.animations.slotShiftLeft?.easing || 'ease-out');
+        const shouldAnimate = shiftInfo && shiftPhase === 'animating';
+
         return (
           <div 
             key={index}
@@ -52,12 +127,15 @@ const Slot: React.FC<SlotProps> = ({ tiles, uiConfig, starBurstSlots = [], onSta
           >
             {tile && (
               <div 
-                className={`relative w-full h-full flex items-center justify-center ${
+                className={`absolute w-full h-full flex items-center justify-center ${
                   tile.animationState === 'bouncing' ? 'animate-slot-bounce' : ''
                 } ${
                   tile.animationState === 'matching' ? 'animate-tile-match' : ''
                 }`}
                 style={{
+                  zIndex: 10,
+                  transform: `translateX(${shiftOffset}px)`,
+                  transition: shouldAnimate ? `transform ${shiftDuration}ms ${shiftEasing}` : 'none',
                   '--slot-bounce-duration': `${uiConfig?.effects.animations.slotBounce.duration || 200}ms`,
                   '--slot-bounce-easing': uiConfig?.effects.animations.slotBounce.easing || 'cubic-bezier(0.34, 1.56, 0.64, 1)',
                   '--bounce-scale': uiConfig?.effects.animations.slotBounce.scale || 1.1,
@@ -67,7 +145,6 @@ const Slot: React.FC<SlotProps> = ({ tiles, uiConfig, starBurstSlots = [], onSta
                   '--match-opacity': uiConfig?.effects.animations.tileMatch.opacity || 0,
                 } as React.CSSProperties}
               >
-                {/* 使用配置中的棋子块作为背景 */}
                 <img 
                   src={uiConfig?.assets.tiles.background.path || "/assets/棋子块.png"} 
                   alt="tile background" 
@@ -79,7 +156,6 @@ const Slot: React.FC<SlotProps> = ({ tiles, uiConfig, starBurstSlots = [], onSta
                   }}
                 />
                 
-                {/* 在棋子块上显示水果图片 */}
                 <div className="relative z-10 flex items-center justify-center w-full h-full">
                   {tile.image ? (
                     <img 
