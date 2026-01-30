@@ -156,7 +156,7 @@ const App: React.FC = () => {
         backgroundColor: '#fdfaf3'
       }}
     >
-      <div className="flex justify-center items-center h-16 mt-4">
+      <div className="flex justify-center items-center py-2">
         <div className="w-1/4 min-w-[140px] bg-white/90 backdrop-blur rounded-full shadow-lg flex items-center px-4 py-2 border-2 border-blue-100">
           <img 
             src={uiConfig?.assets.ui.scoreIcon.path || '/assets/img_star.png'} 
@@ -173,7 +173,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full flex-grow relative overflow-hidden" style={{ height: '60vh' }}>
+      <div className="w-full flex-1 relative overflow-hidden" style={{ maxHeight: '45vh' }}>
         <GameBoard 
           tiles={gameState.allTiles.filter(t => !t.isRemoved && !t.isInSlot)} 
           onTileClick={handleTileClick}
@@ -200,17 +200,18 @@ const App: React.FC = () => {
         )}
       </div>
 
-      <div className="w-full flex justify-center py-6 px-4">
+      <div className="w-full flex justify-center py-2 px-4">
         <div 
-          className="flex justify-center items-center p-3 relative"
+          className="flex justify-center items-center p-2 relative w-full"
           style={uiConfig ? {
             backgroundImage: `url(${uiConfig.assets.ui.slotContainer.path})`,
-            width: uiConfig.dimensions.slotContainer?.width || 600,
-            height: uiConfig.dimensions.slotContainer?.height || 120,
+            maxWidth: uiConfig.dimensions.slotContainer?.width || 500,
+            minHeight: 70,
+            aspectRatio: '500 / 100',
             ...uiConfig.assets.ui.slotContainer.style
           } : {
-            width: 600,
-            height: 120,
+            maxWidth: 500,
+            minHeight: 70,
             backgroundColor: 'rgba(219, 234, 254, 0.3)'
           }}
         >
@@ -218,21 +219,21 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full flex justify-center items-center pb-8 pt-2">
+      <div className="w-full flex justify-center items-center pb-4 pt-2">
         <button 
           className="relative w-[85%] max-w-sm transition-all active:scale-95"
           style={uiConfig ? {
             backgroundImage: `url(${uiConfig.assets.ui.button.path})`,
-            height: uiConfig.assets.ui.button.height,
+            height: Math.min(uiConfig.assets.ui.button.height || 80, 70),
             ...uiConfig.assets.ui.button.style,
             border: 'none',
             backgroundColor: 'transparent'
           } : {
-            height: 80,
+            height: 70,
             backgroundColor: '#7d89d9'
           }}
         >
-          <span className="text-white font-black text-xl tracking-widest">
+          <span className="text-white font-black text-lg tracking-widest">
             {uiConfig?.text.buttons.getMoreTiles || 'GET MORE TILES'}
           </span>
         </button>

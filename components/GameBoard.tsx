@@ -11,8 +11,9 @@ interface GameBoardProps {
 
 const GameBoard: React.FC<GameBoardProps> = ({ tiles, onTileClick, uiConfig }) => {
   return (
-    <div className="relative w-full h-full">
-      {tiles.map((tile) => (
+    <div className="relative w-full h-full flex justify-center items-center">
+      <div className="relative" style={{ width: '350px', height: '400px', maxWidth: '90vw', maxHeight: '100%' }}>
+        {tiles.map((tile) => (
         <div
           key={tile.id}
           onClick={() => tile.isSelectable && onTileClick(tile.id)}
@@ -73,6 +74,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ tiles, onTileClick, uiConfig }) =
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 };

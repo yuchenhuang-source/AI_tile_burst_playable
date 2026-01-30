@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TileData } from '../types';
 import { getSlotMaxCapacity } from '../constants';
 import { UIConfig } from '../uiConfig.types';
@@ -13,6 +13,22 @@ const Slot: React.FC<SlotProps> = ({ tiles, uiConfig }) => {
   const slotMaxCapacity = uiConfig?.dimensions.slot.maxCapacity || getSlotMaxCapacity();
   const slots = Array.from({ length: slotMaxCapacity });
 
+  // 使用state来存储槽位大小，以便响应窗口变化
+  const [slotItemSize, setSlotItemSize] = useState(76);
+
+  useEffect(() => {
+    const calculateSlotSize = () => {
+      const baseSize = uiConfig?.dimensions.slotItem.width || 76;
+      // 屏幕宽度减去padding(左右各24px)，再除以槽位数量加间隙
+      const maxSize = (window.innerWidth - 48) / (slotMaxCapacity + 0.5);
+      setSlotItemSize(Math.min(baseSize, maxSize));
+    };
+
+    calculateSlotSize();
+    window.addEventListener('resize', calculateSlotSize);
+    return () => window.removeEventListener('resize', calculateSlotSize);
+  }, [slotMaxCapacity, uiConfig]);
+
   return (
     <div className="flex gap-1 w-full justify-center items-center h-full">
       {slots.map((_, index) => {
@@ -20,12 +36,14 @@ const Slot: React.FC<SlotProps> = ({ tiles, uiConfig }) => {
         return (
           <div 
             key={index} 
-            className="flex items-center justify-center overflow-visible relative"
+            className="flex items-center justify-center overflow-visible relative flex-shrink-0"
             style={{
-              width: uiConfig?.dimensions.slotItem.width || 85,
-              height: uiConfig?.dimensions.slotItem.height || 90,
+              width: slotItemSize,
+              height: slotItemSize,
               backgroundImage: uiConfig ? `url(${uiConfig.assets.ui.slotCell.path})` : 'url(/assets/img_play_bg2.png)',
-              ...uiConfig?.assets.ui.slotCell.style
+              backgroundSize: 'contain',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
             }}
           >
             {tile && (
