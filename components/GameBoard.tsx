@@ -5,7 +5,7 @@ import { UIConfig } from '../uiConfig.types';
 
 interface GameBoardProps {
   tiles: TileData[];
-  onTileClick: (id: string) => void;
+  onTileClick: (id: string, rect: DOMRect) => void;
   uiConfig: UIConfig | null;
 }
 
@@ -25,7 +25,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ tiles, onTileClick, uiConfig }) =
         {tiles.map((tile) => (
         <div
           key={tile.id}
-          onClick={() => tile.isSelectable && onTileClick(tile.id)}
+          data-tile-id={tile.id}
+          onClick={(e) => {
+            if (tile.isSelectable) {
+              const rect = e.currentTarget.getBoundingClientRect();
+              onTileClick(tile.id, rect);
+            }
+          }}
           className={`
             absolute transition-all duration-300 transform
             cursor-pointer group

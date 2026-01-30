@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { TileData, GameState, DEFAULT_TILE_SIZE } from './types';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { TileData, GameState, FlyingTile, DEFAULT_TILE_SIZE } from './types';
 import { getTileTypes, getSlotMaxCapacity } from './constants';
 import GameBoard from './components/GameBoard';
 import Slot from './components/Slot';
 import { loadUIConfig } from './configLoader';
 import { UIConfig } from './uiConfig.types';
+import './animations.css';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -15,6 +16,8 @@ const App: React.FC = () => {
     gameOver: false,
   });
   const [uiConfig, setUIConfig] = useState<UIConfig | null>(null);
+  const [flyingTile, setFlyingTile] = useState<FlyingTile | null>(null);
+  const slotContainerRef = useRef<HTMLDivElement>(null);
 
   const initializeGame = useCallback(() => {
     const tiles: TileData[] = [];
@@ -117,50 +120,119 @@ const App: React.FC = () => {
     });
   }
 
-  const handleTileClick = (tileId: string) => {
-    setGameState(prev => {
-      const slotMaxCapacity = getSlotMaxCapacity();
-      if (prev.slot.length >= slotMaxCapacity || prev.gameOver) return prev;
+  const handleTileClick = (tileId: string, tileRect: DOMRect) => {
+    const slotMaxCapacity = uiConfig?.dimensions.slot.maxCapacity || getSlotMaxCapacity();
+    
+    if (gameState.slot.length >= slotMaxCapacity || gameState.gameOver || flyingTile) return;
 
-      const tile = prev.allTiles.find(t => t.id === tileId);
-      if (!tile || !tile.isSelectable) return prev;
+    const tile = gameState.allTiles.find(t => t.id === tileId);
+    if (!tile || !tile.isSelectable) return;
 
-      const newSlot = [...prev.slot, { ...tile, isInSlot: true }];
-      const updatedAllTiles = prev.allTiles.map(t => 
-        t.id === tileId ? { ...t, isInSlot: true } : t
-      );
+    const slotContainer = slotContainerRef.current;
+    if (!slotContainer) return;
 
-      const groupedSlot = newSlot.sort((a, b) => a.type - b.type);
+    const currentSlotCount = gameState.slot.length;
+    const targetSlotIndex = currentSlotCount;
+    
+    const targetSlotElement = slotContainer.querySelector(`[data-slot-index="${targetSlotIndex}"]`);
+    if (!targetSlotElement) return;
+    
+    const slotCellRect = targetSlotElement.getBoundingClientRect();
+    const tileSize = uiConfig?.dimensions.gameBoardTile.size || DEFAULT_TILE_SIZE;
+    
+    const targetX = slotCellRect.left + slotCellRect.width / 2 - tileSize / 2;
+    const targetY = slotCellRect.top + slotCellRect.height / 2 - tileSize / 2;
 
-      const typeCount: Record<number, number> = {};
-      groupedSlot.forEach(t => {
-        typeCount[t.type] = (typeCount[t.type] || 0) + 1;
-      });
-
-      let finalSlot = [...groupedSlot];
-      let finalAllTiles = [...updatedAllTiles];
-      let scoreIncrement = 0;
-
-      const matchedType = Object.entries(typeCount).find(([_, count]) => count === 3);
-      if (matchedType) {
-        const typeToRemove = parseInt(matchedType[0]);
-        finalSlot = finalSlot.filter(t => t.type !== typeToRemove);
-        finalAllTiles = finalAllTiles.map(t => 
-          t.type === typeToRemove && t.isInSlot ? { ...t, isRemoved: true, isInSlot: false } : t
-        );
-        scoreIncrement = 100;
-      }
-
-      const isGameOver = finalSlot.length >= slotMaxCapacity;
-
-      return {
-        ...prev,
-        allTiles: updateSelectableTiles(finalAllTiles),
-        slot: finalSlot,
-        score: prev.score + scoreIncrement,
-        gameOver: isGameOver,
-      };
+    setFlyingTile({
+      tile: tile,
+      startX: tileRect.left,
+      startY: tileRect.top,
+      endX: targetX,
+      endY: targetY,
+      isFlying: false,
     });
+
+    setGameState(prev => ({
+      ...prev,
+      allTiles: prev.allTiles.map(t => 
+        t.id === tileId ? { ...t, isInSlot: true } : t
+      ),
+    }));
+
+    requestAnimationFrame(() => {
+      setFlyingTile(prev => prev ? { ...prev, isFlying: true } : null);
+    });
+
+    const flyDuration = uiConfig?.effects.animations.tileToSlot.duration || 400;
+
+    setTimeout(() => {
+      setFlyingTile(null);
+      
+      setGameState(prev => {
+        const newTile = { ...tile, isInSlot: true, animationState: 'bouncing' as const };
+        const newSlot = [...prev.slot, newTile];
+        const updatedAllTiles = prev.allTiles.map(t => 
+          t.id === tileId ? { ...t, isInSlot: true } : t
+        );
+
+        const groupedSlot = newSlot.sort((a, b) => a.type - b.type);
+
+        const typeCount: Record<number, number> = {};
+        groupedSlot.forEach(t => {
+          typeCount[t.type] = (typeCount[t.type] || 0) + 1;
+        });
+
+        const matchedType = Object.entries(typeCount).find(([_, count]) => count === 3);
+        
+        if (matchedType) {
+          const typeToRemove = parseInt(matchedType[0]);
+          const matchDuration = uiConfig?.effects.animations.tileMatch.duration || 300;
+          
+          const slotWithMatchAnimation = groupedSlot.map(t => 
+            t.type === typeToRemove ? { ...t, animationState: 'matching' as const } : t
+          );
+          
+          setTimeout(() => {
+            setGameState(current => {
+              const finalSlot = current.slot.filter(t => t.type !== typeToRemove);
+              const finalAllTiles = current.allTiles.map(t => 
+                t.type === typeToRemove && t.isInSlot ? { ...t, isRemoved: true, isInSlot: false } : t
+              );
+              
+              return {
+                ...current,
+                allTiles: updateSelectableTiles(finalAllTiles),
+                slot: finalSlot,
+                score: current.score + 100,
+                scorePopup: { value: 100, key: Date.now() },
+              };
+            });
+          }, matchDuration);
+
+          return {
+            ...prev,
+            allTiles: updateSelectableTiles(updatedAllTiles),
+            slot: slotWithMatchAnimation,
+          };
+        }
+
+        const isGameOver = groupedSlot.length >= slotMaxCapacity;
+
+        setTimeout(() => {
+          setGameState(current => ({
+            ...current,
+            slot: current.slot.map(t => ({ ...t, animationState: 'idle' as const }))
+          }));
+        }, uiConfig?.effects.animations.slotBounce.duration || 200);
+
+        return {
+          ...prev,
+          allTiles: updateSelectableTiles(updatedAllTiles),
+          slot: groupedSlot,
+          gameOver: isGameOver,
+        };
+      });
+    }, flyDuration);
   };
 
   return (
@@ -236,6 +308,7 @@ const App: React.FC = () => {
 
       <div className="w-full flex justify-center py-2 px-4">
         <div 
+          ref={slotContainerRef}
           className="flex justify-center items-center p-2 relative w-full"
           style={uiConfig ? {
             backgroundImage: `url(${uiConfig.assets.ui.slotContainer.path})`,
@@ -272,6 +345,47 @@ const App: React.FC = () => {
           </span>
         </button>
       </div>
+
+      {flyingTile && (
+        <div
+          className="fixed pointer-events-none z-[9999]"
+          style={{
+            left: flyingTile.isFlying ? flyingTile.endX : flyingTile.startX,
+            top: flyingTile.isFlying ? flyingTile.endY : flyingTile.startY,
+            width: uiConfig?.dimensions.gameBoardTile.size || DEFAULT_TILE_SIZE,
+            height: uiConfig?.dimensions.gameBoardTile.size || DEFAULT_TILE_SIZE,
+            transition: flyingTile.isFlying 
+              ? `all ${uiConfig?.effects.animations.tileToSlot.duration || 400}ms ${uiConfig?.effects.animations.tileToSlot.easing || 'cubic-bezier(0.34, 1.56, 0.64, 1)'}`
+              : 'none',
+          }}
+        >
+          <div className="relative w-full h-full">
+            <img 
+              src={uiConfig?.assets.tiles.background.path || "/assets/棋子块.png"} 
+              alt="tile background" 
+              className="absolute object-contain w-full h-full"
+              style={{
+                filter: uiConfig?.effects.shadows.tile || 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2))'
+              }}
+            />
+            <div className="relative z-10 flex items-center justify-center w-full h-full">
+              {flyingTile.tile.image ? (
+                <img 
+                  src={flyingTile.tile.image} 
+                  alt={flyingTile.tile.icon} 
+                  className="object-contain select-none"
+                  style={{
+                    width: uiConfig?.assets.tiles.fruitScale.gameBoard || '55%',
+                    height: uiConfig?.assets.tiles.fruitScale.gameBoard || '55%'
+                  }}
+                />
+              ) : (
+                <span className="text-3xl select-none">{flyingTile.tile.icon}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

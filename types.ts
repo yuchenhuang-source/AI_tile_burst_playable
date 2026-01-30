@@ -3,7 +3,7 @@ export interface TileData {
   id: string;
   type: number;
   icon: string;
-  image?: string; // Optional image URL for the tile face
+  image?: string;
   baseColor: string;
   x: number;
   y: number;
@@ -11,6 +11,7 @@ export interface TileData {
   isRemoved: boolean;
   isInSlot: boolean;
   isSelectable: boolean;
+  animationState?: 'idle' | 'flying' | 'bouncing' | 'matching';
 }
 
 export interface GameState {
@@ -18,6 +19,17 @@ export interface GameState {
   slot: TileData[];
   score: number;
   gameOver: boolean;
+  matchingTiles?: string[];
+  scorePopup?: { value: number; key: number };
+}
+
+export interface FlyingTile {
+  tile: TileData;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  isFlying: boolean;
 }
 
 // 这些值现在从 uiConfig.json 动态加载

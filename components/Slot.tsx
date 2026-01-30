@@ -35,7 +35,8 @@ const Slot: React.FC<SlotProps> = ({ tiles, uiConfig }) => {
         const tile = tiles[index];
         return (
           <div 
-            key={index} 
+            key={index}
+            data-slot-index={index}
             className="flex items-center justify-center overflow-visible relative flex-shrink-0"
             style={{
               width: slotItemSize,
@@ -48,10 +49,20 @@ const Slot: React.FC<SlotProps> = ({ tiles, uiConfig }) => {
           >
             {tile && (
               <div 
-                className="relative w-full h-full flex items-center justify-center"
+                className={`relative w-full h-full flex items-center justify-center ${
+                  tile.animationState === 'bouncing' ? 'animate-slot-bounce' : ''
+                } ${
+                  tile.animationState === 'matching' ? 'animate-tile-match' : ''
+                }`}
                 style={{
-                  animation: uiConfig?.effects.animations.tileEnterSlot || 'bounce 0.3s ease-out'
-                }}
+                  '--slot-bounce-duration': `${uiConfig?.effects.animations.slotBounce.duration || 200}ms`,
+                  '--slot-bounce-easing': uiConfig?.effects.animations.slotBounce.easing || 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  '--bounce-scale': uiConfig?.effects.animations.slotBounce.scale || 1.1,
+                  '--tile-match-duration': `${uiConfig?.effects.animations.tileMatch.duration || 300}ms`,
+                  '--tile-match-easing': uiConfig?.effects.animations.tileMatch.easing || 'ease-out',
+                  '--match-scale': uiConfig?.effects.animations.tileMatch.scale || 1.3,
+                  '--match-opacity': uiConfig?.effects.animations.tileMatch.opacity || 0,
+                } as React.CSSProperties}
               >
                 {/* 使用配置中的棋子块作为背景 */}
                 <img 

@@ -81,7 +81,7 @@ export interface UIConfig {
         name: string;
         width: number;
         height: number;
-        style: {
+        style?: {
           backgroundSize: string;
           backgroundPosition: string;
           backgroundRepeat: string;
@@ -132,12 +132,45 @@ export interface UIConfig {
       tileInSlot: string;
     };
     animations: {
-      tileEnterSlot: string;
-      buttonPress: string;
+      tileToSlot: {
+        duration: number;
+        easing: string;
+      };
+      tileMatch: {
+        duration: number;
+        easing: string;
+        scale: number;
+        opacity: number;
+      };
+      slotBounce: {
+        duration: number;
+        easing: string;
+        scale: number;
+      };
+      tilePress: {
+        duration: number;
+        scale: number;
+      };
+      buttonPress: {
+        duration: number;
+        scale: number;
+      };
+      scorePopup: {
+        duration: number;
+        easing: string;
+        translateY: number;
+        opacity: number;
+      };
     };
     transitions: {
-      tile: string;
-      button: string;
+      tile: {
+        duration: number;
+        easing: string;
+      };
+      button: {
+        duration: number;
+        easing: string;
+      };
     };
   };
   
