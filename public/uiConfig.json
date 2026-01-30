@@ -1,0 +1,213 @@
+{
+  "gameInfo": {
+    "name": "Zen Match Explorer",
+    "version": "1.0.0",
+    "description": "三消益智游戏配置文件"
+  },
+  
+  "dimensions": {
+    "tile": {
+      "size": 76,
+      "_comment": "方块的基础尺寸（像素），用于游戏板上的方块显示"
+    },
+    "board": {
+      "width": 400,
+      "height": 600,
+      "_comment": "游戏板的宽高（像素）"
+    },
+    "slot": {
+      "maxCapacity": 6,
+      "_comment": "底部槽位的最大容量，决定游戏难度"
+    },
+    "slotContainer": {
+      "width": 500,
+      "height": 100,
+      "_comment": "槽位容器的尺寸，保持素材比例(1018:172 ≈ 6:1)"
+    },
+    "slotItem": {
+      "width": 76,
+      "height": 76,
+      "_comment": "单个槽位格子的尺寸，与方块大小完全一致(76x76px)"
+    }
+  },
+  
+  "assets": {
+    "backgrounds": {
+      "main": {
+        "path": "/assets/bg1.jpg",
+        "name": "主背景",
+        "_comment": "游戏主界面背景图，建议尺寸：1920x1080或更高",
+        "style": {
+          "backgroundSize": "cover",
+          "backgroundPosition": "center",
+          "backgroundRepeat": "no-repeat"
+        }
+      }
+    },
+    
+    "tiles": {
+      "background": {
+        "path": "/assets/棋子块.png",
+        "name": "棋子块背景",
+        "_comment": "每个方块的背景图案，建议尺寸：140x153",
+        "gameBoardScale": "100%",
+        "slotScale": "100%",
+        "_effect": "使用drop-shadow添加阴影效果增强立体感"
+      },
+      "fruits": [
+        {
+          "id": 0,
+          "path": "/assets/ic_tile_strawberry.png",
+          "name": "草莓",
+          "baseColor": "#ff6b6b",
+          "_comment": "水果图标，建议尺寸：64x64"
+        },
+        {
+          "id": 1,
+          "path": "/assets/ic_tile_grape.png",
+          "name": "葡萄",
+          "baseColor": "#9775fa"
+        },
+        {
+          "id": 2,
+          "path": "/assets/ic_tile_orange.png",
+          "name": "橙子",
+          "baseColor": "#ff922b"
+        },
+        {
+          "id": 3,
+          "path": "/assets/ic_tile_lemon.png",
+          "name": "柠檬",
+          "baseColor": "#ffd43b"
+        },
+        {
+          "id": 4,
+          "path": "/assets/ic_tile_blueberry.png",
+          "name": "蓝莓",
+          "baseColor": "#4c6ef5"
+        },
+        {
+          "id": 5,
+          "path": "/assets/ic_tile_watermelon.png",
+          "name": "西瓜",
+          "baseColor": "#51cf66"
+        }
+      ],
+      "fruitScale": {
+        "gameBoard": "55%",
+        "slot": "55%",
+        "_comment": "水果图标在不同位置的缩放比例"
+      }
+    },
+    
+    "ui": {
+      "scoreIcon": {
+        "path": "/assets/img_star.png",
+        "name": "分数图标",
+        "width": 32,
+        "height": 32,
+        "_comment": "分数显示区域的星星图标"
+      },
+      "button": {
+        "path": "/assets/btn.png",
+        "name": "按钮背景",
+        "_comment": "按钮背景图片，建议为九宫格可拉伸图片",
+        "height": 80,
+        "style": {
+          "backgroundSize": "contain",
+          "backgroundPosition": "center",
+          "backgroundRepeat": "no-repeat"
+        }
+      },
+      "slotContainer": {
+        "path": "/assets/img_play_bg1.png",
+        "name": "槽位容器背景",
+        "_comment": "底部槽位区域的背景图",
+        "height": 96,
+        "style": {
+          "backgroundSize": "100% 100%",
+          "backgroundPosition": "center",
+          "backgroundRepeat": "no-repeat"
+        }
+      },
+      "slotCell": {
+        "path": "/assets/img_play_bg2.png",
+        "name": "单个槽位背景",
+        "_comment": "每个槽位格子的背景图",
+        "style": {
+          "backgroundSize": "contain",
+          "backgroundPosition": "center",
+          "backgroundRepeat": "no-repeat"
+        }
+      }
+    }
+  },
+  
+  "effects": {
+    "shadows": {
+      "tile": "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2))",
+      "tileInSlot": "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15))",
+      "_comment": "阴影效果配置，用于增强立体感"
+    },
+    "animations": {
+      "tileEnterSlot": "bounce 0.3s ease-out",
+      "buttonPress": "scale(0.95)",
+      "_comment": "动画效果配置"
+    },
+    "transitions": {
+      "tile": "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+      "button": "all 0.2s",
+      "_comment": "过渡效果配置"
+    }
+  },
+  
+  "gameplay": {
+    "scoring": {
+      "matchBonus": 100,
+      "_comment": "消除一组（3个）方块获得的分数"
+    },
+    "tiles": {
+      "totalCount": 36,
+      "typesCount": 6,
+      "matchCount": 3,
+      "_comment": "游戏方块配置：总数量、类型数、消除所需数量"
+    },
+    "layout": {
+      "layers": 3,
+      "tilesPerLayer": 12,
+      "randomOffset": 50,
+      "_comment": "布局配置：层数、每层方块数、随机偏移量（像素）"
+    }
+  },
+  
+  "text": {
+    "buttons": {
+      "getMoreTiles": "GET MORE TILES",
+      "tryAgain": "TRY AGAIN"
+    },
+    "gameOver": {
+      "title": "Oops!",
+      "subtitle": "Slot is full!"
+    },
+    "_comment": "游戏中的文本内容，方便国际化"
+  },
+  
+  "_usage": {
+    "description": "UI配置文件使用说明",
+    "notes": [
+      "1. 所有路径相对于public文件夹",
+      "2. 颜色值使用标准CSS格式（#hex或rgb/rgba）",
+      "3. 尺寸单位为像素（px），除非特别说明",
+      "4. 百分比值用于缩放比例",
+      "5. _comment字段为注释说明，不会被程序使用",
+      "6. _effect字段说明特殊效果",
+      "7. style对象直接应用于元素的style属性"
+    ],
+    "modifyTips": [
+      "更换素材：修改assets中对应的path路径",
+      "调整大小：修改dimensions中的尺寸值",
+      "更换颜色：修改baseColor或相关颜色值",
+      "调整难度：修改slot.maxCapacity（槽位数）或gameplay配置"
+    ]
+  }
+}

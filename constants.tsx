@@ -1,33 +1,44 @@
 
+import { UIConfig } from './uiConfig.types';
+import { getUIConfig } from './configLoader';
+
 /**
  * =========================================================================
- * 如何更换素材 (HOW TO CHANGE ASSETS)
+ * 配置说明 (CONFIGURATION GUIDE)
  * =========================================================================
- * 1. 更换图标: 
- *    修改下方 TILE_TYPES 数组中每个对象的 'icon' (使用 Emoji)
- *    或者添加 'image' 属性 (使用图片 URL)。
- * 
- * 2. 使用图片素材:
- *    例如: { icon: '', image: 'https://example.com/apple.png', baseColor: '#7d89d9' }
- *    脚本会自动检测并优先渲染图片。
- * 
- * 3. 更换底色:
- *    修改 'baseColor' 属性。这个颜色决定了方块侧面和底部的 3D 深度颜色。
- * 
- * 4. 调整槽位数量:
- *    修改 SLOT_MAX_CAPACITY 的值。
+ * 所有UI配置现在都在 public/uiConfig.json 文件中
+ * 修改该文件即可更改游戏的视觉效果和参数
  * =========================================================================
  */
 
-export const TILE_TYPES = [
-  // 使用棋子图片素材
-  { icon: '', image: '/assets/ic_tile_strawberry.png', baseColor: '#ff6b6b' }, 
-  { icon: '', image: '/assets/ic_tile_grape.png', baseColor: '#9775fa' }, 
-  { icon: '', image: '/assets/ic_tile_orange.png', baseColor: '#ff922b' }, 
-  { icon: '', image: '/assets/ic_tile_lemon.png', baseColor: '#ffd43b' }, 
-  { icon: '', image: '/assets/ic_tile_blueberry.png', baseColor: '#4c6ef5' }, 
-  { icon: '', image: '/assets/ic_tile_watermelon.png', baseColor: '#51cf66' }, 
-];
+// 从配置文件获取方块类型
+export function getTileTypes() {
+  const config = getUIConfig();
+  if (!config) {
+    // 默认配置（配置文件未加载时使用）
+    return [
+      { icon: '🍎', image: '', baseColor: '#7d89d9' },
+      { icon: '🥑', image: '', baseColor: '#7d89d9' },
+      { icon: '🍇', image: '', baseColor: '#7d89d9' },
+      { icon: '🍊', image: '', baseColor: '#7d89d9' },
+      { icon: '🍓', image: '', baseColor: '#7d89d9' },
+      { icon: '🫐', image: '', baseColor: '#7d89d9' },
+    ];
+  }
+  
+  return config.assets.tiles.fruits.map(fruit => ({
+    icon: '',
+    image: fruit.path,
+    baseColor: fruit.baseColor
+  }));
+}
 
-// 游戏底槽的最大容量
-export const SLOT_MAX_CAPACITY = 6;
+// 从配置文件获取槽位容量
+export function getSlotMaxCapacity() {
+  const config = getUIConfig();
+  return config?.dimensions.slot.maxCapacity || 7;
+}
+
+// 导出兼容性常量
+export const TILE_TYPES = getTileTypes();
+export const SLOT_MAX_CAPACITY = getSlotMaxCapacity();

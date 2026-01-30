@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { TileData, GameState, TILE_SIZE } from './types';
-import { TILE_TYPES, SLOT_MAX_CAPACITY } from './constants';
+import { getTileTypes, getSlotMaxCapacity } from './constants';
 import GameBoard from './components/GameBoard';
 import Slot from './components/Slot';
+import { loadUIConfig } from './configLoader';
+import { UIConfig } from './uiConfig.types';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -12,14 +14,16 @@ const App: React.FC = () => {
     score: 0,
     gameOver: false,
   });
+  const [uiConfig, setUIConfig] = useState<UIConfig | null>(null);
 
   const initializeGame = useCallback(() => {
     const tiles: TileData[] = [];
+    const tileTypes = getTileTypes();
     const numTypes = 6;
     const setsOfThree = 12; // Total 36 tiles
     
     for (let t = 0; t < numTypes; t++) {
-      const typeInfo = TILE_TYPES[t % TILE_TYPES.length];
+      const typeInfo = tileTypes[t % tileTypes.length];
       for (let s = 0; s < (setsOfThree * 3) / numTypes; s++) {
         tiles.push({
           id: Math.random().toString(36).substr(2, 9),
@@ -65,8 +69,14 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    initializeGame();
-  }, [initializeGame]);
+    loadUIConfig().then(config => {
+      setUIConfig(config);
+      initializeGame();
+    }).catch(error => {
+      console.error('Failed to load UI config:', error);
+      initializeGame(); // 使用默认配置继续
+    });
+  }, []);
 
   function updateSelectableTiles(tiles: TileData[]): TileData[] {
     return tiles.map((tile) => {
@@ -92,7 +102,8 @@ const App: React.FC = () => {
 
   const handleTileClick = (tileId: string) => {
     setGameState(prev => {
-      if (prev.slot.length >= SLOT_MAX_CAPACITY || prev.gameOver) return prev;
+      const slotMaxCapacity = getSlotMaxCapacity();
+      if (prev.slot.length >= slotMaxCapacity || prev.gameOver) return prev;
 
       const tile = prev.allTiles.find(t => t.id === tileId);
       if (!tile || !tile.isSelectable) return prev;
@@ -123,7 +134,7 @@ const App: React.FC = () => {
         scoreIncrement = 100;
       }
 
-      const isGameOver = finalSlot.length >= SLOT_MAX_CAPACITY;
+      const isGameOver = finalSlot.length >= slotMaxCapacity;
 
       return {
         ...prev,
@@ -138,16 +149,24 @@ const App: React.FC = () => {
   return (
     <div 
       className="flex flex-col h-screen w-full overflow-hidden select-none"
-      style={{
-        backgroundImage: 'url(/assets/bg1.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+      style={uiConfig ? {
+        backgroundImage: `url(${uiConfig.assets.backgrounds.main.path})`,
+        ...uiConfig.assets.backgrounds.main.style
+      } : {
+        backgroundColor: '#fdfaf3'
       }}
     >
       <div className="flex justify-center items-center h-16 mt-4">
         <div className="w-1/4 min-w-[140px] bg-white/90 backdrop-blur rounded-full shadow-lg flex items-center px-4 py-2 border-2 border-blue-100">
-          <img src="/assets/img_star.png" alt="star" className="w-8 h-8 mr-2" />
+          <img 
+            src={uiConfig?.assets.ui.scoreIcon.path || '/assets/img_star.png'} 
+            alt="star" 
+            className="mr-2"
+            style={{
+              width: uiConfig?.assets.ui.scoreIcon.width || 32,
+              height: uiConfig?.assets.ui.scoreIcon.height || 32
+            }}
+          />
           <div className="flex-1 text-center font-black text-blue-600 text-xl tracking-tight">
             {gameState.score}
           </div>
@@ -157,19 +176,24 @@ const App: React.FC = () => {
       <div className="w-full flex-grow relative overflow-hidden" style={{ height: '60vh' }}>
         <GameBoard 
           tiles={gameState.allTiles.filter(t => !t.isRemoved && !t.isInSlot)} 
-          onTileClick={handleTileClick} 
+          onTileClick={handleTileClick}
+          uiConfig={uiConfig}
         />
         
         {gameState.gameOver && (
           <div className="absolute inset-0 bg-blue-900/20 backdrop-blur-md flex items-center justify-center z-[1000]">
             <div className="bg-white p-10 rounded-[40px] shadow-2xl text-center transform scale-110 border-4 border-blue-50">
-              <h2 className="text-4xl font-black text-blue-700 mb-2">Oops!</h2>
-              <p className="text-blue-400 font-bold mb-8">Slot is full!</p>
+              <h2 className="text-4xl font-black text-blue-700 mb-2">
+                {uiConfig?.text.gameOver.title || 'Oops!'}
+              </h2>
+              <p className="text-blue-400 font-bold mb-8">
+                {uiConfig?.text.gameOver.subtitle || 'Slot is full!'}
+              </p>
               <button 
                 onClick={initializeGame}
                 className="bg-[#7d89d9] hover:bg-[#6c78c8] text-white font-black py-4 px-12 rounded-full transition-all shadow-[0_6px_0_#5a66a8] active:shadow-none active:translate-y-1"
               >
-                TRY AGAIN
+                {uiConfig?.text.buttons.tryAgain || 'TRY AGAIN'}
               </button>
             </div>
           </div>
@@ -178,31 +202,39 @@ const App: React.FC = () => {
 
       <div className="w-full flex justify-center py-6 px-4">
         <div 
-          className="w-[85%] max-w-[450px] flex justify-center items-center h-24 p-3 relative"
-          style={{
-            backgroundImage: 'url(/assets/img_play_bg1.png)',
-            backgroundSize: '100% 100%',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
+          className="flex justify-center items-center p-3 relative"
+          style={uiConfig ? {
+            backgroundImage: `url(${uiConfig.assets.ui.slotContainer.path})`,
+            width: uiConfig.dimensions.slotContainer?.width || 600,
+            height: uiConfig.dimensions.slotContainer?.height || 120,
+            ...uiConfig.assets.ui.slotContainer.style
+          } : {
+            width: 600,
+            height: 120,
+            backgroundColor: 'rgba(219, 234, 254, 0.3)'
           }}
         >
-          <Slot tiles={gameState.slot} />
+          <Slot tiles={gameState.slot} uiConfig={uiConfig} />
         </div>
       </div>
 
       <div className="w-full flex justify-center items-center pb-8 pt-2">
         <button 
-          className="relative w-[85%] max-w-sm h-20 transition-all active:scale-95"
-          style={{
-            backgroundImage: 'url(/assets/btn.png)',
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
+          className="relative w-[85%] max-w-sm transition-all active:scale-95"
+          style={uiConfig ? {
+            backgroundImage: `url(${uiConfig.assets.ui.button.path})`,
+            height: uiConfig.assets.ui.button.height,
+            ...uiConfig.assets.ui.button.style,
             border: 'none',
             backgroundColor: 'transparent'
+          } : {
+            height: 80,
+            backgroundColor: '#7d89d9'
           }}
         >
-          <span className="text-white font-black text-xl tracking-widest">GET MORE TILES</span>
+          <span className="text-white font-black text-xl tracking-widest">
+            {uiConfig?.text.buttons.getMoreTiles || 'GET MORE TILES'}
+          </span>
         </button>
       </div>
     </div>
