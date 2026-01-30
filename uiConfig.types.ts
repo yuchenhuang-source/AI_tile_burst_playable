@@ -161,6 +161,22 @@ export interface UIConfig {
         translateY: number;
         opacity: number;
       };
+      starBurst: {
+        frameCount: number;
+        frameDuration: number;
+        basePath: string;
+        frameFormat: string;
+        extension: string;
+        width: number;
+        height: number;
+      };
+      starFly: {
+        duration: number;
+        easing: string;
+        starSize: number;
+        starImage: string;
+        delay: number;
+      };
     };
     transitions: {
       tile: {

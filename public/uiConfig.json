@@ -225,6 +225,28 @@
         "_target": "分数文字",
         "_effect": "上浮淡出效果",
         "_comment": "得分时数字上浮并淡出的上浮淡出效果"
+      },
+      "starBurst": {
+        "frameCount": 15,
+        "frameDuration": 33,
+        "basePath": "/assets/星星弹出/星星弹出_",
+        "frameFormat": "000",
+        "extension": ".png",
+        "width": 160,
+        "height": 160,
+        "_target": "槽位方块",
+        "_effect": "序列帧动画效果",
+        "_comment": "三消匹配成功时在每个消除的槽位播放星星弹出序列帧动画，15帧约30fps"
+      },
+      "starFly": {
+        "duration": 600,
+        "easing": "ease-in",
+        "starSize": 30,
+        "starImage": "/assets/img_star.png",
+        "delay": 0,
+        "_target": "飞行星星",
+        "_effect": "飞行效果",
+        "_comment": "星星从消除位置飞向分数条星星位置的飞行效果"
       }
     },
     

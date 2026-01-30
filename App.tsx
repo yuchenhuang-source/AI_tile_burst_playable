@@ -4,9 +4,19 @@ import { TileData, GameState, FlyingTile, DEFAULT_TILE_SIZE } from './types';
 import { getTileTypes, getSlotMaxCapacity } from './constants';
 import GameBoard from './components/GameBoard';
 import Slot from './components/Slot';
+import FlyingStar from './components/FlyingStar';
+import SpriteAnimation from './components/SpriteAnimation';
 import { loadUIConfig } from './configLoader';
 import { UIConfig } from './uiConfig.types';
 import './animations.css';
+
+interface FlyingStarData {
+  id: string;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+}
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -17,7 +27,11 @@ const App: React.FC = () => {
   });
   const [uiConfig, setUIConfig] = useState<UIConfig | null>(null);
   const [flyingTile, setFlyingTile] = useState<FlyingTile | null>(null);
+  const [starBurstSlots, setStarBurstSlots] = useState<number[]>([]);
+  const [flyingStars, setFlyingStars] = useState<FlyingStarData[]>([]);
+  const [scoreStarBursts, setScoreStarBursts] = useState<string[]>([]);
   const slotContainerRef = useRef<HTMLDivElement>(null);
+  const scoreIconRef = useRef<HTMLDivElement>(null);
 
   const initializeGame = useCallback(() => {
     const tiles: TileData[] = [];
@@ -83,6 +97,14 @@ const App: React.FC = () => {
   useEffect(() => {
     loadUIConfig().then(config => {
       setUIConfig(config);
+      
+      if (config?.effects.animations.starBurst) {
+        const { frameCount, basePath, frameFormat, extension } = config.effects.animations.starBurst;
+        for (let i = 1; i <= frameCount; i++) {
+          const img = new Image();
+          img.src = `${basePath}${i.toString().padStart(frameFormat.length, '0')}${extension}`;
+        }
+      }
     }).catch(error => {
       console.error('Failed to load UI config:', error);
     });
@@ -192,6 +214,14 @@ const App: React.FC = () => {
             t.type === typeToRemove ? { ...t, animationState: 'matching' as const } : t
           );
           
+          const matchingIndices: number[] = [];
+          groupedSlot.forEach((t, idx) => {
+            if (t.type === typeToRemove) {
+              matchingIndices.push(idx);
+            }
+          });
+          setStarBurstSlots(matchingIndices);
+          
           setTimeout(() => {
             setGameState(current => {
               const finalSlot = current.slot.filter(t => t.type !== typeToRemove);
@@ -235,6 +265,38 @@ const App: React.FC = () => {
     }, flyDuration);
   };
 
+  const handleStarBurstComplete = (index: number, position: {x: number, y: number}) => {
+    setStarBurstSlots(prev => prev.filter(i => i !== index));
+    
+    if (position.x === 0 && position.y === 0) return;
+    
+    const scoreIcon = scoreIconRef.current;
+    if (!scoreIcon) return;
+    
+    const iconRect = scoreIcon.getBoundingClientRect();
+    const endX = iconRect.left + iconRect.width / 2;
+    const endY = iconRect.top + iconRect.height / 2;
+    
+    const starId = `star-${Date.now()}-${index}`;
+    setFlyingStars(prev => [...prev, {
+      id: starId,
+      startX: position.x,
+      startY: position.y,
+      endX,
+      endY,
+    }]);
+  };
+
+  const handleFlyingStarComplete = (starId: string) => {
+    setFlyingStars(prev => prev.filter(s => s.id !== starId));
+    const burstId = `score-burst-${Date.now()}-${Math.random()}`;
+    setScoreStarBursts(prev => [...prev, burstId]);
+  };
+
+  const handleScoreStarBurstComplete = (burstId: string) => {
+    setScoreStarBursts(prev => prev.filter(id => id !== burstId));
+  };
+
   return (
     <div 
       className="flex flex-col h-screen w-full overflow-hidden select-none"
@@ -247,17 +309,47 @@ const App: React.FC = () => {
     >
       <div className="flex justify-center items-center py-2">
         <div className="relative flex items-center justify-center">
-          <img 
-            src={uiConfig?.assets.ui.scoreIcon.path || '/assets/img_star.png'} 
-            alt="star" 
-            className="absolute z-10"
+          <div
+            ref={scoreIconRef}
+            className="absolute z-[1001]"
             style={{
               width: uiConfig?.assets.ui.scoreIcon.width || 50,
               height: uiConfig?.assets.ui.scoreIcon.height || 50,
               left: 0,
               transform: 'translateX(-50%)'
             }}
-          />
+          >
+            {scoreStarBursts.map(burstId => (
+              uiConfig?.effects.animations.starBurst && (
+                <div 
+                  key={burstId}
+                  className="absolute z-[1] pointer-events-none"
+                  style={{
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  <SpriteAnimation
+                    frameCount={uiConfig.effects.animations.starBurst.frameCount}
+                    frameDuration={uiConfig.effects.animations.starBurst.frameDuration}
+                    basePath={uiConfig.effects.animations.starBurst.basePath}
+                    frameFormat={uiConfig.effects.animations.starBurst.frameFormat}
+                    extension={uiConfig.effects.animations.starBurst.extension}
+                    width={uiConfig.effects.animations.starBurst.width}
+                    height={uiConfig.effects.animations.starBurst.height}
+                    onComplete={() => handleScoreStarBurstComplete(burstId)}
+                  />
+                </div>
+              )
+            ))}
+            <img 
+              src={uiConfig?.assets.ui.scoreIcon.path || '/assets/img_star.png'} 
+              alt="star" 
+              className="relative z-[2]"
+              style={{ width: '100%', height: '100%' }}
+            />
+          </div>
           <img 
             src={uiConfig?.assets.ui.scoreBar?.path || '/assets/img_name_bg.png'}
             alt="score bar"
@@ -322,7 +414,12 @@ const App: React.FC = () => {
             backgroundColor: 'rgba(219, 234, 254, 0.3)'
           }}
         >
-          <Slot tiles={gameState.slot} uiConfig={uiConfig} />
+          <Slot 
+            tiles={gameState.slot} 
+            uiConfig={uiConfig} 
+            starBurstSlots={starBurstSlots}
+            onStarBurstComplete={handleStarBurstComplete}
+          />
         </div>
       </div>
 
@@ -386,6 +483,22 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      {flyingStars.map(star => (
+        <FlyingStar
+          key={star.id}
+          startX={star.startX}
+          startY={star.startY}
+          endX={star.endX}
+          endY={star.endY}
+          duration={uiConfig?.effects.animations.starFly?.duration || 600}
+          easing={uiConfig?.effects.animations.starFly?.easing || 'ease-in'}
+          size={uiConfig?.effects.animations.starFly?.starSize || 30}
+          imagePath={uiConfig?.effects.animations.starFly?.starImage || '/assets/img_star.png'}
+          delay={uiConfig?.effects.animations.starFly?.delay || 0}
+          onComplete={() => handleFlyingStarComplete(star.id)}
+        />
+      ))}
     </div>
   );
 };

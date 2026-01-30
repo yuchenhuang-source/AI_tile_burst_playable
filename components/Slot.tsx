@@ -3,13 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { TileData } from '../types';
 import { getSlotMaxCapacity } from '../constants';
 import { UIConfig } from '../uiConfig.types';
+import SpriteAnimation from './SpriteAnimation';
 
 interface SlotProps {
   tiles: TileData[];
   uiConfig: UIConfig | null;
+  starBurstSlots?: number[];
+  onStarBurstComplete?: (index: number, position: {x: number, y: number}) => void;
 }
 
-const Slot: React.FC<SlotProps> = ({ tiles, uiConfig }) => {
+const Slot: React.FC<SlotProps> = ({ tiles, uiConfig, starBurstSlots = [], onStarBurstComplete }) => {
   const slotMaxCapacity = uiConfig?.dimensions.slot.maxCapacity || getSlotMaxCapacity();
   const slots = Array.from({ length: slotMaxCapacity });
 
@@ -92,6 +95,39 @@ const Slot: React.FC<SlotProps> = ({ tiles, uiConfig }) => {
                     <span className="text-lg sm:text-xl select-none filter drop-shadow-sm">{tile.icon}</span>
                   )}
                 </div>
+              </div>
+            )}
+            
+            {starBurstSlots.includes(index) && uiConfig?.effects.animations.starBurst && (
+              <div 
+                className="absolute z-20 pointer-events-none"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <SpriteAnimation
+                  frameCount={uiConfig.effects.animations.starBurst.frameCount}
+                  frameDuration={uiConfig.effects.animations.starBurst.frameDuration}
+                  basePath={uiConfig.effects.animations.starBurst.basePath}
+                  frameFormat={uiConfig.effects.animations.starBurst.frameFormat}
+                  extension={uiConfig.effects.animations.starBurst.extension}
+                  width={uiConfig.effects.animations.starBurst.width}
+                  height={uiConfig.effects.animations.starBurst.height}
+                  onComplete={() => {
+                    const slotElement = document.querySelector(`[data-slot-index="${index}"]`);
+                    if (slotElement) {
+                      const rect = slotElement.getBoundingClientRect();
+                      onStarBurstComplete?.(index, {
+                        x: rect.left + rect.width / 2,
+                        y: rect.top + rect.height / 2
+                      });
+                    } else {
+                      onStarBurstComplete?.(index, { x: 0, y: 0 });
+                    }
+                  }}
+                />
               </div>
             )}
           </div>
